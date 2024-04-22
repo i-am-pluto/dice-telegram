@@ -1,0 +1,7 @@
+{
+  "name": "dice-game",
+  "version": "1.0.0",
+  "description": "telegram bot",
+  "main": "index.js",
+  "license": "MIT"
+}
