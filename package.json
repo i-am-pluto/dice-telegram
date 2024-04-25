@@ -3,5 +3,10 @@
   "version": "1.0.0",
   "description": "telegram bot",
   "main": "index.js",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.3.2",
+    "telegraf": "^4.16.3"
+  }
 }
