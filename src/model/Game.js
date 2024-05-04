@@ -8,15 +8,16 @@ const gameSchema = new Schema({
     player2UserId: {
         type: String
     },
-
-    player1Scores: [{
-        type: Number,
-    }],
-    player2Scores: [{
-        type: Number,
-        default: 0
-    }],
-
+    player1Scores: {
+        type: Map,
+        of: Number,
+        default: () => new Map()
+    },
+    player2Scores: {
+        type: Map,
+        of: Number,
+        default: () => new Map()
+    },
     turn: {
         type: Boolean,
         default: true

@@ -8,6 +8,7 @@ const { default: mongoose } = require('mongoose');
 const { validatePrivateChat } = require('./src/validations/ChatValidations');
 const ValidationError = require('./src/validations/ValidationError');
 const User = require('./src/model/User');
+const dmBotOwner = require('./src/helper/dmBotOwner');
 
 
 const { NAME, TOKEN } = process.env
@@ -19,8 +20,20 @@ connectDB()
 
 bot.use(async (ctx, next) => {
     const session = await mongoose.startSession();
-    await UserService.registerOrLoginUser(ctx.from.id, ctx.from.first_name, ctx.from.username, session);
     ctx.session = session;
+    ctx.session.startTransaction();
+
+    try {
+        await UserService.registerOrLoginUser(ctx.from.id, ctx.from.first_name, ctx.from.username, session);
+        await ctx.session.commitTransaction();
+        ctx.session.endSession();
+    } catch (error) {
+        ctx.replyWithMarkdown("SERVER ERROR: Bot owner has been notified.");
+        console.error(error); // Log the detailed error for server/admin
+        await ctx.session.abortTransaction();
+        ctx.session.endSession();
+    }
+
     await next();
 });
 
@@ -60,21 +73,11 @@ bot.action(...handlers.acceptGameHandler);
 
 bot.on(...handlers.moveHandler);
 
-
-bot.catch(async (error, ctx) => {
-
-    if (error instanceof ValidationError) {
-        ctx.replyWithMarkdown(error.message);
-    } else {
-        ctx.replyWithMarkdown("SERVER ERROR: Bot owner has been notified.");
-        console.error(error); // Log the detailed error for server/admin
-    }
-
-    await ctx.session.abortTransaction();
-    ctx.session.endSession();
-
+bot.catch((error, ctx) => {
+    ctx.replyWithMarkdown("SERVER ERROR: Bot owner has been notified.");
+    dmBotOwner(ctx, error);
+    console.error(error); // Log the detailed error for server/admin
 });
-
 bot.launch()
 console.log("Bot is running...")
 

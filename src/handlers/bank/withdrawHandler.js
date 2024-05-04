@@ -1,9 +1,17 @@
 const { Withdraw } = require("../../constants/WithdrawConstants");
 const UserService = require("../../service/UserService");
 const { validatePrivateChat } = require("../../validations/ChatValidations");
+const { default: mongoose } = require('mongoose');
+const ValidationError = require("../../validations/ValidationError");
+const dmBotOwner = require("../../helper/dmBotOwner");
+
 
 module.exports = ["withdraw", async (ctx) => {
-        ctx.session.startTransaction();
+    const session = await mongoose.startSession();
+    ctx.session = session;
+    ctx.session.startTransaction();
+
+    try {
 
         validatePrivateChat(ctx);
 
@@ -26,6 +34,23 @@ module.exports = ["withdraw", async (ctx) => {
         ctx.reply(Withdraw.SUCCESS_WITHDRAWAL.replace("{amount}", amount).replace("{newBalance}", userBalance - amount));
 
         await ctx.session.commitTransaction();
+
+    } catch (error) {
+
+        if (error instanceof ValidationError) {
+            ctx.replyWithMarkdown(error.message);
+        } else {
+            ctx.replyWithMarkdown("SERVER ERROR: Bot owner has been notified.");
+            dmBotOwner(ctx, error);
+            console.error(error); // Log the detailed error for server/admin
+        }
+        await ctx.session.abortTransaction();
+
+
+    } finally {
         ctx.session.endSession();
-    
+    }
+
+
+
 }];

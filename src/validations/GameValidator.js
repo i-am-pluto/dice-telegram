@@ -3,7 +3,6 @@ const GameService = require('../service/GameService');
 const UserService = require('../service/UserService');
 
 const validateTurnOfTheUserWhoMoved = async (ctx, userId, game) => {
-    console.log(game.turn, game.player1UserId, game.player2UserId, userId)
     if (!(game.turn && game.player1UserId == userId) && !(!game.turn && game.player2UserId == userId)) {
         throw new ValidationError(`[${ctx.from.first_name}](tg://user?id=${ctx.from.id}), It's not your turn to make the move.`, "INVALID_TURN");
     }

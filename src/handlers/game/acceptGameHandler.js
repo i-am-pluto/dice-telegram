@@ -6,24 +6,31 @@ const ValidationError = require('../../validations/ValidationError'); // Assumin
 const { validateGroup } = require("../../validations/ChatValidations");
 const { validateNoActiveGame, validateNoPendingGame, validateChalengeeBalance, validateCantAcceptOwnChallenge } = require("../../validations/GameValidator");
 const { Messages, TelegramOptions, Regex } = require("../../constants/AcceptConstants");
+const { default: mongoose } = require('mongoose');
+const dmBotOwner = require("../../helper/dmBotOwner");
 
 
 module.exports = [
     Regex.ACCEPT_CHALLENGE, async (ctx) => {
-            ctx.session.startTransaction();
+
+
+        const session = await mongoose.startSession();
+        ctx.session = session;
+        ctx.session.startTransaction();
+
+        try {
 
             const player1UserID = parseInt(ctx.match[1]);
             const player2UserID = ctx.from.id;
             const game = await GameService.findUserPendingGames(player1UserID);
 
             validateGroup(ctx);
-            validateCantAcceptOwnChallenge(ctx, player1UserID, player2UserID);
+            // validateCantAcceptOwnChallenge(ctx, player1UserID, player2UserID);
             await validateNoActiveGame(player2UserID, ctx);
-            await validateNoPendingGame(player2UserID, ctx);
+            // await validateNoPendingGame(player2UserID, ctx);
             await validateChalengeeBalance(ctx, player2UserID, game.moneyPool);
 
             const acceptedGame = await GameService.acceptGameChallenge(player1UserID, player2UserID, game.moneyPool, ctx.session);
-            console.log(acceptedGame)
             const user1 = await UserService.getUserById(player1UserID);
 
             ctx.telegram.sendMessage(player1UserID, Messages.GAME_CHALLENGE_ACCEPTED.replace("{username}", ctx.from.username), TelegramOptions.PARSE_MODE);
@@ -33,7 +40,22 @@ module.exports = [
             ctx.replyWithMarkdown(Messages.GAME_ON.replace("{playerName}", user1.firstName).replace("{playerId}", player1UserID));
 
             await ctx.session.commitTransaction();
+
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                ctx.replyWithMarkdown(error.message);
+            } else {
+                ctx.replyWithMarkdown("SERVER ERROR: Bot owner has been notified.");
+                dmBotOwner(ctx, error);
+                console.error(error); // Log the detailed error for server/admin
+            }
+            await ctx.session.abortTransaction();
+
+        } finally {
             ctx.session.endSession();
+        }
+
+
 
     }
 ];

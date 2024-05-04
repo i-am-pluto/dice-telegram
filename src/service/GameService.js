@@ -24,7 +24,7 @@ const acceptGameChallenge = async (targetUserId, userId, user_amount, session) =
     game.player2UserId = userId;
     game.status = 'active';
     game.moneyPool += user_amount;
-    await updateUserBalance(userId, -user_amount,session);
+    await updateUserBalance(userId, -user_amount, session);
     return await game.save({ session });
 };
 
@@ -44,27 +44,27 @@ const timeOutActiveGame = async (gameId, session) => {
         await updateUserBalance(game.player2UserId, game.moneyPool / 2, session);
         await updateUserBalance(game.player1UserId, game.moneyPool / 2, session);
         return await game.save({ session });
+
     }
 };
 
-const updateGameScore = async (gameId, userId, score, session) => {
-    const game = await Game.findById(gameId);
-
-    const playerField = String(userId) == game.player1UserId ? 'player1Scores' : 'player2Scores';
-    const opponentField = playerField == 'player1Scores' ? 'player2Scores' : 'player1Scores';
-    game[playerField].push(score);
-    if (game[playerField].length === game[opponentField].length &&
-        game[playerField].slice(-1)[0] === game[opponentField].slice(-1)[0]) {
-        game[playerField].pop();
-        game[opponentField].pop();
+const updateGameScore = async (game, score, session) => {
+    let currentRoundPlayer1 = game.player1Scores.size + 1;  // Assuming new rounds are added consecutively
+    let currentRoundPlayer2 = game.player2Scores.size + 1;  // Assuming new rounds are added consecutively
+    if (game.turn) {
+        game.player1Scores.set(currentRoundPlayer1.toString(), score);
+    } else {
+        game.player2Scores.set(currentRoundPlayer2.toString(), score);
     }
-
-    game.turn = !game.turn;
     return await game.save({ session });
 };
 
-const checkGameFinished = async (gameId, session) => {
-    const game = await Game.findById(gameId);
+const toggleTurn = async (game, session) => {
+    game.turn = !game.turn;
+    return await game.save({ session });
+}
+
+const checkGameFinished = async (game, session) => {
     const scores = getGameScores(game);
     if (scores.player1TotalScore === 3 || scores.player2TotalScore === 3) {
         game.status = 'finished';
@@ -77,22 +77,25 @@ const checkGameFinished = async (gameId, session) => {
 };
 
 const getGameScores = (game) => {
-    if (game.player2Scores.length !== game.player1Scores.length) {
-        throw new Error("Scores length not equal");
+
+    if (game.player1Scores.size !== game.player2Scores.size) {
+        throw new Error("Scores cannot be calculated until both players have played the same number of rounds.");
     }
-    var player1TotalScore = 0;
-    var player2TotalScore = 0;
-    console.log(game.player1Scores, game.player2Scores)
-    game.player1Scores.forEach((score, i) => {
-        if (score > game.player2Scores[i]) {
+
+    let player1TotalScore = 0;
+    let player2TotalScore = 0;
+
+    game.player1Scores.forEach((score1, round) => {
+        const score2 = game.player2Scores.get(round);
+        if (score1 > score2) {
             player1TotalScore++;
-        } else if (score < game.player2Scores[i]) {
+        } else if (score1 < score2) {
             player2TotalScore++;
         }
     });
+
     return { player1TotalScore, player2TotalScore };
 };
-
 const getGameById = async (gameId) => {
     return await Game.findById(gameId);
 };
@@ -108,4 +111,5 @@ module.exports = {
     checkGameFinished,
     getGameById,
     getGameScores,
+    toggleTurn
 };
