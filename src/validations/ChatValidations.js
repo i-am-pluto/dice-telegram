@@ -1,10 +1,6 @@
 const ValidationError = require('./ValidationError');
 
-const validatePrivateChat = (ctx) => {
-    if (ctx.chat.type !== 'private') {
-        throw new ValidationError("This command can only be used in a private. Please switch to a private chat.", "NOT_PRIVATE_CHAT");
-    }
-}
+
 
 const validateGroup = (ctx) => {
     if (!ctx.chat.type.includes('group')) {
@@ -13,6 +9,5 @@ const validateGroup = (ctx) => {
 };
 
 module.exports = {
-    validatePrivateChat,
     validateGroup
 }

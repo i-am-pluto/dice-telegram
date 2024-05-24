@@ -9,17 +9,13 @@ const { Messages, TelegramOptions, Regex } = require("../../constants/AcceptCons
 const { default: mongoose } = require('mongoose');
 const dmBotOwner = require("../../helper/dmBotOwner");
 
-
 module.exports = [
     Regex.ACCEPT_CHALLENGE, async (ctx) => {
-
-
         const session = await mongoose.startSession();
         ctx.session = session;
         ctx.session.startTransaction();
 
         try {
-
             const player1UserID = parseInt(ctx.match[1]);
             const player2UserID = ctx.from.id;
             const game = await GameService.findUserPendingGames(player1UserID);
@@ -39,8 +35,12 @@ module.exports = [
 
             ctx.replyWithMarkdown(Messages.GAME_ON.replace("{playerName}", user1.firstName).replace("{playerId}", player1UserID));
 
-            await ctx.session.commitTransaction();
+            // Delete the challenge message
+            if (ctx.update.callback_query.message) {
+                await ctx.telegram.deleteMessage(ctx.update.callback_query.message.chat.id, ctx.update.callback_query.message.message_id);
+            }
 
+            await ctx.session.commitTransaction();
         } catch (error) {
             if (error instanceof ValidationError) {
                 ctx.replyWithMarkdown(error.message);
@@ -50,12 +50,8 @@ module.exports = [
                 console.error(error); // Log the detailed error for server/admin
             }
             await ctx.session.abortTransaction();
-
         } finally {
             ctx.session.endSession();
         }
-
-
-
     }
 ];

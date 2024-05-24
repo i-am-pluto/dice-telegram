@@ -19,6 +19,11 @@ const createGameChallenge = async (targetUserId, amount, session) => {
     return await game.save({ session });
 };
 
+const cancelGameChallenge = async (gameId, userId, amount, session) => {
+    await Game.deleteOne({ _id: gameId }, { session });
+    await updateUserBalance(userId, amount);
+};
+
 const acceptGameChallenge = async (targetUserId, userId, user_amount, session) => {
     const game = await Game.findOne({ player1UserId: targetUserId, status: 'pending' });
     game.player2UserId = userId;
@@ -111,5 +116,6 @@ module.exports = {
     checkGameFinished,
     getGameById,
     getGameScores,
-    toggleTurn
+    toggleTurn,
+    cancelGameChallenge
 };

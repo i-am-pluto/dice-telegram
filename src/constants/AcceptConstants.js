@@ -7,7 +7,8 @@ module.exports = {
         GAME_ON: "🔥 Game on! It's your turn, [{playerName}](tg://user?id={playerId})!"
     },
     Regex: {
-        ACCEPT_CHALLENGE: /ACCEPT_(.*)/
+        ACCEPT_CHALLENGE: /ACCEPT_(.*)/,
+        CANCEL_CHALLENGE: /CANCEL_(.*)/
     },
     TelegramOptions: {
         PARSE_MODE: { parse_mode: 'Markdown' },
